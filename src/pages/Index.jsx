@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEnquiry, useAddEnquiry, useUpdateEnquiry, useDeleteEnquiry } from '@/integrations/supabase';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,9 +25,10 @@ const Index = () => {
   const [visibleColumns, setVisibleColumns] = useState(['sno', 'enquiry_id', 'client', 'created_date']);
   const queryClient = useQueryClient();
 
-  const { data: enquiries = [], isLoading } = useEnquiry();
+  const { data: enquiries = [], isLoading, isError, error } = useEnquiry();
 
   const filteredEnquiries = useMemo(() => {
+    if (!enquiries) return [];
     return enquiries.filter(enquiry => 
       (search === '' || Object.values(enquiry).some(value => 
         typeof value === 'string' && value.toLowerCase().includes(search.toLowerCase())
@@ -54,40 +55,43 @@ const Index = () => {
     }
   });
 
-  const handleAddEnquiry = (data) => {
+  const handleAddEnquiry = useCallback((data) => {
     addMutation.mutate(data, {
       onSuccess: () => {
         toast.success("Enquiry added successfully! Great job!");
         form.reset();
+        queryClient.invalidateQueries(['enquiry']);
       },
       onError: (error) => {
         toast.error(`Oops! Something went wrong: ${error.message}`);
       }
     });
-  };
+  }, [addMutation, form, queryClient]);
 
-  const handleUpdateEnquiry = (enquiry) => {
+  const handleUpdateEnquiry = useCallback((enquiry) => {
     updateMutation.mutate(enquiry, {
       onSuccess: () => {
         toast.success("Enquiry updated successfully! You're on a roll!");
         setEditingEnquiry(null);
+        queryClient.invalidateQueries(['enquiry']);
       },
       onError: (error) => {
         toast.error(`Uh-oh! We couldn't update the enquiry: ${error.message}`);
       }
     });
-  };
+  }, [updateMutation, queryClient]);
 
-  const handleDeleteEnquiry = (id) => {
+  const handleDeleteEnquiry = useCallback((id) => {
     deleteMutation.mutate(id, {
       onSuccess: () => {
         toast.success("Enquiry deleted successfully. Cleaning up like a pro!");
+        queryClient.invalidateQueries(['enquiry']);
       },
       onError: (error) => {
         toast.error(`We hit a snag while deleting: ${error.message}`);
       }
     });
-  };
+  }, [deleteMutation, queryClient]);
 
   const toggleColumn = (column) => {
     setVisibleColumns(prev => 
@@ -95,10 +99,11 @@ const Index = () => {
     );
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  if (isError) return <div className="flex justify-center items-center h-screen text-red-500">Error: {error.message}</div>;
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 min-h-screen">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Enquiry Manager</CardTitle>
