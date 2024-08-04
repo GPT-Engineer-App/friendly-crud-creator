@@ -4,6 +4,44 @@ import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button";
 
+const CustomPagination = ({ className, currentPage, totalPages, onPageChange }) => {
+  const pageNumbers = [];
+  for (let i = 1; i <= totalPages; i++) {
+    pageNumbers.push(i);
+  }
+
+  return (
+    <nav className={cn("flex justify-center items-center space-x-2", className)} aria-label="Pagination">
+      <PaginationLink
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        disabled={currentPage === 1}
+        aria-label="Go to previous page"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Previous
+      </PaginationLink>
+      {pageNumbers.map((number) => (
+        <PaginationLink
+          key={number}
+          onClick={() => onPageChange(number)}
+          aria-current={currentPage === number ? "page" : undefined}
+          disabled={currentPage === number}
+        >
+          {number}
+        </PaginationLink>
+      ))}
+      <PaginationLink
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage === totalPages}
+        aria-label="Go to next page"
+      >
+        Next
+        <ChevronRight className="h-4 w-4" />
+      </PaginationLink>
+    </nav>
+  );
+};
+
 const Pagination = ({
   className,
   ...props
@@ -97,12 +135,8 @@ export {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  CustomPagination
 }
-
-const CustomPagination = ({ currentPage, totalPages, onPageChange }) => {
-  return (
-    <div className="flex items-center justify-center space-x-2">
-      <Button
         variant="outline"
         size="sm"
         onClick={() => onPageChange(currentPage - 1)}
