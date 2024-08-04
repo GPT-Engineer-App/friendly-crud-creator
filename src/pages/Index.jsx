@@ -1,12 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEnquiry, useAddEnquiry, useUpdateEnquiry, useDeleteEnquiry } from '@/integrations/supabase';
-// Remove any imports related to html-to-image if they exist
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Search, Filter, ArrowLeft } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, Filter, ArrowLeft, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -17,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker";
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2 } from "lucide-react";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -28,19 +28,30 @@ const Index = () => {
   const [visibleColumns, setVisibleColumns] = useState(['sno', 'enquiry_id', 'client', 'created_date']);
   const [selectedEnquiries, setSelectedEnquiries] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
   const queryClient = useQueryClient();
 
   const { data: enquiries = [], isLoading, isError, error } = useEnquiry();
 
   const filteredEnquiries = useMemo(() => {
     if (!enquiries) return [];
-    return enquiries.filter(enquiry => 
+    let filtered = enquiries.filter(enquiry => 
       (search === '' || Object.values(enquiry).some(value => 
         typeof value === 'string' && value.toLowerCase().includes(search.toLowerCase())
       )) &&
       (!dateFilter || new Date(enquiry.created_date).toDateString() === dateFilter.toDateString())
     );
-  }, [enquiries, search, dateFilter]);
+
+    if (sortConfig.key) {
+      filtered.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'ascending' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [enquiries, search, dateFilter, sortConfig]);
 
   const paginatedEnquiries = useMemo(() => {
     const startIndex = (page - 1) * ITEMS_PER_PAGE;
@@ -59,6 +70,20 @@ const Index = () => {
       // Add other fields here
     }
   });
+
+  useEffect(() => {
+    if (enquiries.length > 0) {
+      setVisibleColumns(Object.keys(enquiries[0]).filter(key => !['id', 'created_by', 'updated_by'].includes(key)));
+    }
+  }, [enquiries]);
+
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const handleAddEnquiry = useCallback((data) => {
     addMutation.mutate(data, {
@@ -123,6 +148,25 @@ const Index = () => {
   if (isLoading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
   if (isError) return <div className="flex justify-center items-center h-screen text-red-500">Error: {error.message}</div>;
 
+  const handleExportCSV = () => {
+    const headers = visibleColumns.join(',');
+    const csvData = filteredEnquiries.map(enquiry => 
+      visibleColumns.map(column => enquiry[column]).join(',')
+    ).join('\n');
+    const csvContent = `${headers}\n${csvData}`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'enquiries.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 min-h-screen">
       <Card>
@@ -130,7 +174,13 @@ const Index = () => {
           <CardTitle className="text-2xl font-bold">Enquiry Manager</CardTitle>
         </CardHeader>
         <CardContent>
-          {isCreating ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : isError ? (
+            <div className="text-red-500 text-center">Error: {error.message}</div>
+          ) : isCreating ? (
             <div>
               <Button onClick={() => setIsCreating(false)} className="mb-4">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
@@ -179,7 +229,10 @@ const Index = () => {
                     placeholderText="Filter by date"
                   />
                 </div>
-                <Button onClick={() => setIsCreating(true)}><Plus className="mr-2 h-4 w-4" /> Create Enquiry</Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => setIsCreating(true)}><Plus className="mr-2 h-4 w-4" /> Create Enquiry</Button>
+                  <Button onClick={handleExportCSV}><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
+                </div>
               </div>
               <div className="mb-4">
                 <DragDropContext onDragEnd={handleDragEnd}>
@@ -223,7 +276,12 @@ const Index = () => {
                   <TableRow>
                     <TableHead>Select</TableHead>
                     {visibleColumns.map(column => (
-                      <TableHead key={column}>{column}</TableHead>
+                      <TableHead key={column} onClick={() => requestSort(column)} className="cursor-pointer">
+                        {column}
+                        {sortConfig.key === column && (
+                          <span>{sortConfig.direction === 'ascending' ? ' ▲' : ' ▼'}</span>
+                        )}
+                      </TableHead>
                     ))}
                     <TableHead>Actions</TableHead>
                   </TableRow>
