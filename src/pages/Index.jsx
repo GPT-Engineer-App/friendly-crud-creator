@@ -13,7 +13,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { CustomPagination } from "@/components/ui/pagination";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
