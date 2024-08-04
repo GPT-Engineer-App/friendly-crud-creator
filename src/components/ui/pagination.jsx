@@ -151,8 +151,8 @@ export {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
+        onClick={onPageChange ? () => onPageChange(currentPage + 1) : undefined}
+        disabled={currentPage === totalPages || !onPageChange}
       >
         Next
         <ChevronRight className="h-4 w-4" />
@@ -169,8 +169,8 @@ export const CustomPagination = ({ currentPage, totalPages, onPageChange }) => {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
+        onClick={onPageChange ? () => onPageChange(currentPage - 1) : undefined}
+        disabled={currentPage === 1 || !onPageChange}
       >
         <ChevronLeft className="h-4 w-4" />
         Previous
@@ -310,3 +310,36 @@ export const CustomPagination = ({ currentPage, totalPages, onPageChange }) => {
     </div>
   );
 };
+import React from 'react';
+import { Button } from './button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+const CustomPagination = ({ currentPage, totalPages, onPageChange }) => {
+  return (
+    <div className="flex items-center justify-between px-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onPageChange ? () => onPageChange(currentPage - 1) : undefined}
+        disabled={currentPage === 1 || !onPageChange}
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Previous
+      </Button>
+      <div>
+        Page {currentPage} of {totalPages}
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onPageChange ? () => onPageChange(currentPage + 1) : undefined}
+        disabled={currentPage === totalPages || !onPageChange}
+      >
+        Next
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};
+
+export { CustomPagination };
