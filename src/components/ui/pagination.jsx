@@ -194,13 +194,25 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export const CustomPagination = ({ currentPage, totalPages, onPageChange }) => {
+export function CustomPagination({ currentPage, totalPages, onPageChange }) {
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      onPageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      onPageChange(currentPage + 1);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center space-x-2">
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onPageChange(currentPage - 1)}
+        onClick={handlePrevPage}
         disabled={currentPage === 1}
       >
         <ChevronLeft className="h-4 w-4" />
@@ -212,7 +224,7 @@ export const CustomPagination = ({ currentPage, totalPages, onPageChange }) => {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onPageChange(currentPage + 1)}
+        onClick={handleNextPage}
         disabled={currentPage === totalPages}
       >
         Next
@@ -220,7 +232,7 @@ export const CustomPagination = ({ currentPage, totalPages, onPageChange }) => {
       </Button>
     </div>
   );
-};
+}
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
