@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Search, Filter } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, Filter, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -14,6 +14,9 @@ import { toast } from "sonner";
 import { CustomPagination } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { Checkbox } from "@/components/ui/checkbox";
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -23,6 +26,8 @@ const Index = () => {
   const [dateFilter, setDateFilter] = useState(null);
   const [editingEnquiry, setEditingEnquiry] = useState(null);
   const [visibleColumns, setVisibleColumns] = useState(['sno', 'enquiry_id', 'client', 'created_date']);
+  const [selectedEnquiries, setSelectedEnquiries] = useState([]);
+  const [isCreating, setIsCreating] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: enquiries = [], isLoading, isError, error } = useEnquiry();
@@ -58,12 +63,13 @@ const Index = () => {
   const handleAddEnquiry = useCallback((data) => {
     addMutation.mutate(data, {
       onSuccess: () => {
-        toast.success("Enquiry added successfully! Great job!");
+        toast.success("Enquiry added successfully! You're making great progress!");
         form.reset();
+        setIsCreating(false);
         queryClient.invalidateQueries(['enquiry']);
       },
       onError: (error) => {
-        toast.error(`Oops! Something went wrong: ${error.message}`);
+        toast.error(`Oops! We encountered a small hiccup: ${error.message}. Let's try again!`);
       }
     });
   }, [addMutation, form, queryClient]);
@@ -71,12 +77,12 @@ const Index = () => {
   const handleUpdateEnquiry = useCallback((enquiry) => {
     updateMutation.mutate(enquiry, {
       onSuccess: () => {
-        toast.success("Enquiry updated successfully! You're on a roll!");
+        toast.success("Enquiry updated successfully! Your attention to detail is impressive!");
         setEditingEnquiry(null);
         queryClient.invalidateQueries(['enquiry']);
       },
       onError: (error) => {
-        toast.error(`Uh-oh! We couldn't update the enquiry: ${error.message}`);
+        toast.error(`We hit a small bump while updating: ${error.message}. Don't worry, we can fix this!`);
       }
     });
   }, [updateMutation, queryClient]);
@@ -84,11 +90,12 @@ const Index = () => {
   const handleDeleteEnquiry = useCallback((id) => {
     deleteMutation.mutate(id, {
       onSuccess: () => {
-        toast.success("Enquiry deleted successfully. Cleaning up like a pro!");
+        toast.success("Enquiry deleted successfully. Your workspace is getting cleaner and more organized!");
+        setSelectedEnquiries([]);
         queryClient.invalidateQueries(['enquiry']);
       },
       onError: (error) => {
-        toast.error(`We hit a snag while deleting: ${error.message}`);
+        toast.error(`We encountered a minor setback while deleting: ${error.message}. Let's give it another shot!`);
       }
     });
   }, [deleteMutation, queryClient]);
@@ -97,6 +104,20 @@ const Index = () => {
     setVisibleColumns(prev => 
       prev.includes(column) ? prev.filter(col => col !== column) : [...prev, column]
     );
+  };
+
+  const handleSelectEnquiry = (id) => {
+    setSelectedEnquiries(prev => 
+      prev.includes(id) ? prev.filter(eId => eId !== id) : [...prev, id]
+    );
+  };
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+    const items = Array.from(visibleColumns);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    setVisibleColumns(items);
   };
 
   if (isLoading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
@@ -109,131 +130,197 @@ const Index = () => {
           <CardTitle className="text-2xl font-bold">Enquiry Manager</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex justify-between mb-4">
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search enquiries"
-                className="max-w-sm"
-              />
-              <DatePicker
-                selected={dateFilter}
-                onChange={setDateFilter}
-                placeholderText="Filter by date"
-              />
-            </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button><Plus className="mr-2 h-4 w-4" /> Add Enquiry</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Enquiry</DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleAddEnquiry)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="client"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Client</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    {/* Add other form fields here */}
-                    <Button type="submit">Submit</Button>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
-          <div className="mb-4">
-            <Select onValueChange={toggleColumn}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Toggle columns" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(enquiries[0] || {}).map(column => (
-                  <SelectItem key={column} value={column}>
-                    {column}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {visibleColumns.map(column => (
-                  <TableHead key={column}>{column}</TableHead>
-                ))}
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedEnquiries.map((enquiry) => (
-                <TableRow key={enquiry.id}>
-                  {visibleColumns.map(column => (
-                    <TableCell key={column}>
-                      {editingEnquiry?.id === enquiry.id ? (
-                        <Input
-                          value={editingEnquiry[column]}
-                          onChange={(e) => setEditingEnquiry({ ...editingEnquiry, [column]: e.target.value })}
-                          disabled={['sno', 'created_date', 'created_by', 'updated_date', 'updated_by'].includes(column)}
+          {isCreating ? (
+            <div>
+              <Button onClick={() => setIsCreating(false)} className="mb-4">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+              </Button>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleAddEnquiry)} className="space-y-4">
+                  {Object.keys(enquiries[0] || {}).map(field => {
+                    if (!['id', 'sno', 'created_date', 'created_by', 'updated_date', 'updated_by'].includes(field)) {
+                      return (
+                        <FormField
+                          key={field}
+                          control={form.control}
+                          name={field}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{field}</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
                         />
-                      ) : (
-                        enquiry[column]
-                      )}
-                    </TableCell>
-                  ))}
-                  <TableCell>
-                    {editingEnquiry?.id === enquiry.id ? (
-                      <Button onClick={() => handleUpdateEnquiry(editingEnquiry)}>Save</Button>
-                    ) : (
-                      <Button variant="ghost" onClick={() => setEditingEnquiry(enquiry)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      );
+                    }
+                    return null;
+                  })}
+                  <Button type="submit">Save</Button>
+                  <Button type="button" onClick={() => setIsCreating(false)} variant="outline">Cancel</Button>
+                </form>
+              </Form>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between mb-4">
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search enquiries"
+                    className="max-w-sm"
+                  />
+                  <DatePicker
+                    selected={dateFilter}
+                    onChange={setDateFilter}
+                    placeholderText="Filter by date"
+                  />
+                </div>
+                <Button onClick={() => setIsCreating(true)}><Plus className="mr-2 h-4 w-4" /> Create Enquiry</Button>
+              </div>
+              <div className="mb-4">
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="columns" direction="horizontal">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="flex flex-wrap gap-2">
+                        {visibleColumns.map((column, index) => (
+                          <Draggable key={column} draggableId={column} index={index}>
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="bg-gray-200 p-2 rounded"
+                              >
+                                {column}
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
                     )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost">
-                          <Trash2 className="h-4 w-4" />
+                  </Droppable>
+                </DragDropContext>
+                <Select onValueChange={toggleColumn}>
+                  <SelectTrigger className="w-[180px] mt-2">
+                    <SelectValue placeholder="Toggle columns" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(enquiries[0] || {}).map(column => (
+                      <SelectItem key={column} value={column}>
+                        {column}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Select</TableHead>
+                    {visibleColumns.map(column => (
+                      <TableHead key={column}>{column}</TableHead>
+                    ))}
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedEnquiries.map((enquiry) => (
+                    <TableRow key={enquiry.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedEnquiries.includes(enquiry.id)}
+                          onCheckedChange={() => handleSelectEnquiry(enquiry.id)}
+                        />
+                      </TableCell>
+                      {visibleColumns.map(column => (
+                        <TableCell key={column}>
+                          {enquiry[column]}
+                        </TableCell>
+                      ))}
+                      <TableCell>
+                        <Button variant="ghost" onClick={() => setEditingEnquiry(enquiry)}>
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the enquiry.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteEnquiry(enquiry.id)}>
-                            Yes, delete enquiry
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <CustomPagination
-            className="mt-4"
-            currentPage={page}
-            totalPages={Math.ceil(filteredEnquiries.length / ITEMS_PER_PAGE)}
-            onPageChange={setPage}
-          />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure you want to delete this enquiry?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently remove the enquiry from our records.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteEnquiry(enquiry.id)}>
+                                Yes, delete enquiry
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <CustomPagination
+                className="mt-4"
+                currentPage={page}
+                totalPages={Math.ceil(filteredEnquiries.length / ITEMS_PER_PAGE)}
+                onPageChange={setPage}
+              />
+            </>
+          )}
         </CardContent>
       </Card>
+      {editingEnquiry && (
+        <Dialog open={!!editingEnquiry} onOpenChange={() => setEditingEnquiry(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Enquiry</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(() => handleUpdateEnquiry(editingEnquiry))} className="space-y-4">
+                {Object.keys(editingEnquiry).map(field => {
+                  if (!['id', 'sno', 'created_date', 'created_by', 'updated_date', 'updated_by'].includes(field)) {
+                    return (
+                      <FormField
+                        key={field}
+                        control={form.control}
+                        name={field}
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            <FormLabel>{field}</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...formField} 
+                                value={editingEnquiry[field]} 
+                                onChange={(e) => setEditingEnquiry({...editingEnquiry, [field]: e.target.value})}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  }
+                  return null;
+                })}
+                <Button type="submit">Save</Button>
+                <Button type="button" onClick={() => setEditingEnquiry(null)} variant="outline">Cancel</Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
