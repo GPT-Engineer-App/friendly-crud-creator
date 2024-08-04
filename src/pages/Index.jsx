@@ -11,7 +11,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/
 import { useForm } from "react-hook-form";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Pagination } from "@/components/ui/pagination";
+import { CustomPagination } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 
@@ -226,7 +226,7 @@ const Index = () => {
               ))}
             </TableBody>
           </Table>
-          <Pagination
+          <CustomPagination
             className="mt-4"
             currentPage={page}
             totalPages={Math.ceil(filteredEnquiries.length / ITEMS_PER_PAGE)}

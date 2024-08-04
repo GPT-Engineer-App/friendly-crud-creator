@@ -98,11 +98,8 @@ export {
   PaginationNext,
   PaginationPrevious,
 }
-import React from 'react';
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export function Pagination({ currentPage, totalPages, onPageChange }) {
+const CustomPagination = ({ currentPage, totalPages, onPageChange }) => {
   return (
     <div className="flex items-center justify-center space-x-2">
       <Button
