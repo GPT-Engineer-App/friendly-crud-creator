@@ -16,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker";
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { Checkbox } from "@/components/ui/checkbox";
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 const ITEMS_PER_PAGE = 20;
 
