@@ -139,7 +139,7 @@ export {
 }
         variant="outline"
         size="sm"
-        onClick={() => onPageChange(currentPage - 1)}
+        onClick={(() => onPageChange(currentPage - 1))}
         disabled={currentPage === 1}
       >
         <ChevronLeft className="h-4 w-4" />
